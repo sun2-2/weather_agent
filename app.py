@@ -7,6 +7,10 @@ app = Flask(__name__)
 WEATHER_API_KEY = '54d446e1fbc041bd9ed69ac9b32b02a6'
 WEATHER_API_HOST = 'mq59fddrfk.re.qweatherapi.com'
 
+# DeepSeek API配置
+DEEPSEEK_API_KEY = 'sk-20618fcccd074def8a5e9b2d4ae6ec3b'
+DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
+
 class WeatherAPI:
     """和风天气API封装"""
     
@@ -189,6 +193,40 @@ def get_alert():
 def about():
     """关于页面路由"""
     return render_template('about.html')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """聊天功能路由"""
+    data = request.json
+    message = data.get('message')
+    if not message:
+        return jsonify({'error': '请输入消息'}), 400
+    
+    try:
+        # 调用DeepSeek API
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {DEEPSEEK_API_KEY}'
+        }
+        payload = {
+            'model': 'deepseek-chat',
+            'messages': [
+                {'role': 'system', 'content': '你是一个智能天气助手，除了回答天气相关问题外，也可以回答其他一般问题。'}, 
+                {'role': 'user', 'content': message}
+            ],
+            'temperature': 0.7
+        }
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload)
+        response_data = response.json()
+        
+        if 'choices' in response_data and response_data['choices']:
+            reply = response_data['choices'][0]['message']['content']
+            return jsonify({'reply': reply})
+        else:
+            return jsonify({'error': '获取回复失败'}), 500
+    except Exception as e:
+        print(f"聊天请求失败: {e}")
+        return jsonify({'error': '聊天服务暂时不可用'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
