@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天气助手</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .search-box {
+            text-align: center;
+            margin: 30px 0;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .forecast-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .forecast-day {
+            flex: 1 1 150px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .alert-item {
+            margin: 10px 0;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+        .alert-item.severe {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .nav-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .nav-links a {
+            color: #4CAF50;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>天气助手</h1>
+        <div class="search-box">
+            <input type="text" id="city" placeholder="请输入城市名称">
+            <button onclick="getWeather()">实时天气</button>
+            <button onclick="getForecast()">天气预报</button>
+            <button onclick="getAlert()">天气预警</button>
+        </div>
+        
+        <!-- 实时天气结果 -->
+        <div id="weather-result" class="result-section" style="display: none;">
+            <h2 id="city-name"></h2>
+            <p id="temperature"></p>
+            <p id="weather-desc"></p>
+            <p id="humidity"></p>
+            <p id="wind"></p>
+        </div>
+        
+        <!-- 天气预报结果 -->
+        <div id="forecast-result" class="result-section" style="display: none;">
+            <h2 id="forecast-city"></h2>
+            <div class="forecast-container" id="forecast-container"></div>
+        </div>
+        
+        <!-- 天气预警结果 -->
+        <div id="alert-result" class="result-section" style="display: none;">
+            <h2 id="alert-city"></h2>
+            <div id="alert-container"></div>
+        </div>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        
+        <div class="nav-links">
+            <a href="/about">关于天气助手</a>
+        </div>
+    </div>
+    <script>
+        function getWeather() {
+            const city = document.getElementById('city').value;
+            if (!city) {
+                showError('请输入城市名称');
+                return;
+            }
+            
+            hideAllResults();
+            
+            fetch(`/weather?city=${encodeURIComponent(city)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        document.getElementById('weather-result').style.display = 'block';
+                        document.getElementById('city-name').textContent = data.city;
+                        document.getElementById('temperature').textContent = `温度: ${data.temperature}`;
+                        document.getElementById('weather-desc').textContent = `天气: ${data.description}`;
+                        document.getElementById('humidity').textContent = `湿度: ${data.humidity}`;
+                        document.getElementById('wind').textContent = `风力: ${data.wind}`;
+                    }
+                })
+                .catch(error => {
+                    showError('查询失败，请稍后重试');
+                });
+        }
+        
+        function getForecast() {
+            const city = document.getElementById('city').value;
+            if (!city) {
+                showError('请输入城市名称');
+                return;
+            }
+            
+            hideAllResults();
+            
+            fetch(`/forecast?city=${encodeURIComponent(city)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        document.getElementById('forecast-result').style.display = 'block';
+                        document.getElementById('forecast-city').textContent = data.city;
+                        const forecastContainer = document.getElementById('forecast-container');
+                        forecastContainer.innerHTML = '';
+                        
+                        data.forecast.forEach(day => {
+                            const dayElement = document.createElement('div');
+                            dayElement.className = 'forecast-day';
+                            dayElement.innerHTML = `
+                                <h3>${day.date}</h3>
+                                <p>最高: ${day.temp_max}</p>
+                                <p>最低: ${day.temp_min}</p>
+                                <p>白天: ${day.text_day}</p>
+                                <p>夜间: ${day.text_night}</p>
+                                <p>降水: ${day.precip}</p>
+                            `;
+                            forecastContainer.appendChild(dayElement);
+                        });
+                    }
+                })
+                .catch(error => {
+                    showError('查询失败，请稍后重试');
+                });
+        }
+        
+        function getAlert() {
+            const city = document.getElementById('city').value;
+            if (!city) {
+                showError('请输入城市名称');
+                return;
+            }
+            
+            hideAllResults();
+            
+            fetch(`/alert?city=${encodeURIComponent(city)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        document.getElementById('alert-result').style.display = 'block';
+                        document.getElementById('alert-city').textContent = data.city;
+                        const alertContainer = document.getElementById('alert-container');
+                        alertContainer.innerHTML = '';
+                        
+                        if (data.alerts.length === 0) {
+                            alertContainer.innerHTML = '<p>当前无天气预警信息</p>';
+                        } else {
+                            data.alerts.forEach(alert => {
+                                const alertElement = document.createElement('div');
+                                alertElement.className = `alert-item ${alert.level === '严重' ? 'severe' : ''}`;
+                                alertElement.innerHTML = `
+                                    <h3>${alert.title}</h3>
+                                    <p><strong>发布时间:</strong> ${alert.pubTime}</p>
+                                    <p><strong>发布机构:</strong> ${alert.sender}</p>
+                                    <p><strong>级别:</strong> ${alert.level}</p>
+                                    <p>${alert.text}</p>
+                                `;
+                                alertContainer.appendChild(alertElement);
+                            });
+                        }
+                    }
+                })
+                .catch(error => {
+                    showError('查询失败，请稍后重试');
+                });
+        }
+        
+        function hideAllResults() {
+            document.getElementById('weather-result').style.display = 'none';
+            document.getElementById('forecast-result').style.display = 'none';
+            document.getElementById('alert-result').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-message').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
