@@ -1,0 +1,28 @@
+import requests
+
+# 和风天气API配置
+WEATHER_API_KEY = '54d446e1fbc041bd9ed69ac9b32b02a6'
+
+# 测试标准和风天气API
+def test_standard_api():
+    print("测试标准和风天气API...")
+    url = 'https://geoapi.qweather.com/v2/city/lookup'
+    params = {
+        'key': WEATHER_API_KEY,
+        'location': '北京'
+    }
+    print(f"请求URL: {url}")
+    print(f"请求参数: {params}")
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        print(f"状态码: {response.status_code}")
+        print(f"响应内容: {response.text}")
+        print(f"响应头: {dict(response.headers)}")
+    except Exception as e:
+        print(f"错误: {e}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == '__main__':
+    test_standard_api()

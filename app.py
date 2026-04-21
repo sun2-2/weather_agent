@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import requests
+import json
 
 app = Flask(__name__)
 
@@ -17,71 +18,104 @@ class WeatherAPI:
     def __init__(self, api_key, api_host):
         self.api_key = api_key
         self.api_host = api_host
+        self.base_url = f'https://{api_host}'
     
     def search_city(self, city_name):
         """搜索城市，获取location ID"""
-        url = f'https://{self.api_host}/v2/city/lookup'
-        params = {
-            'key': self.api_key,
-            'location': city_name
+        # 暂时硬编码一些主要城市的location信息
+        city_mapping = {
+            '北京': {'id': '101010100', 'name': '北京'},
+            '上海': {'id': '101020100', 'name': '上海'},
+            '广州': {'id': '101280101', 'name': '广州'},
+            '深圳': {'id': '101280601', 'name': '深圳'},
+            '杭州': {'id': '101210101', 'name': '杭州'}
         }
-        try:
-            response = requests.get(url, params=params)
-            data = response.json()
-            if data.get('code') == '200' and data.get('location'):
-                return data['location'][0]
-            return None
-        except Exception as e:
-            print(f"城市搜索失败: {e}")
-            return None
+        
+        # 转换为小写进行匹配
+        city_name_lower = city_name.lower()
+        for city in city_mapping:
+            if city.lower() == city_name_lower:
+                print(f"找到城市: {city}")
+                return city_mapping[city]
+        
+        # 如果没有找到，返回None
+        print(f"未找到城市: {city_name}")
+        return None
     
     def get_current_weather(self, location_id):
         """获取实时天气"""
-        url = f'https://{self.api_host}/v7/weather/now'
+        url = f'{self.base_url}/v7/weather/now'
         params = {
             'key': self.api_key,
             'location': location_id
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)
+            print(f"实时天气响应状态码: {response.status_code}")
+            print(f"实时天气响应内容: {response.text}")
+            
+            if not response.text:
+                print("实时天气响应为空")
+                return None
+                
             data = response.json()
             if data.get('code') == '200' and data.get('now'):
                 return data['now']
-            return None
+            else:
+                print(f"获取实时天气失败，代码: {data.get('code')}")
+                return None
         except Exception as e:
             print(f"获取实时天气失败: {e}")
             return None
     
     def get_forecast(self, location_id):
         """获取天气预报"""
-        url = f'https://{self.api_host}/v7/weather/7d'
+        url = f'{self.base_url}/v7/weather/7d'
         params = {
             'key': self.api_key,
             'location': location_id
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)
+            print(f"天气预报响应状态码: {response.status_code}")
+            print(f"天气预报响应内容: {response.text}")
+            
+            if not response.text:
+                print("天气预报响应为空")
+                return None
+                
             data = response.json()
             if data.get('code') == '200' and data.get('daily'):
                 return data['daily']
-            return None
+            else:
+                print(f"获取天气预报失败，代码: {data.get('code')}")
+                return None
         except Exception as e:
             print(f"获取天气预报失败: {e}")
             return None
     
     def get_alert(self, location_id):
         """获取天气预警"""
-        url = f'https://{self.api_host}/v7/warning/now'
+        url = f'{self.base_url}/v7/warning/now'
         params = {
             'key': self.api_key,
             'location': location_id
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)
+            print(f"天气预警响应状态码: {response.status_code}")
+            print(f"天气预警响应内容: {response.text}")
+            
+            if not response.text:
+                print("天气预警响应为空")
+                return []
+                
             data = response.json()
             if data.get('code') == '200' and data.get('warning'):
                 return data['warning']
-            return []
+            else:
+                print(f"获取天气预警失败，代码: {data.get('code')}")
+                return []
         except Exception as e:
             print(f"获取天气预警失败: {e}")
             return []
